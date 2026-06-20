@@ -50,7 +50,7 @@ function crumbs(parts) {
   // parts: [{label, href?}] 末尾はリンク無し(現在地)
   const html = parts.map((p, i) => {
     const sep = i > 0 ? '<span class="sep">/</span>' : "";
-    return sep + (p.href ? `<a href="${p.href}">${esc(p.label)}</a>` : `<span>${esc(p.label)}</span>`);
+    return sep + (p.href ? `<a href="${esc(p.href)}">${esc(p.label)}</a>` : `<span>${esc(p.label)}</span>`);
   }).join(" ");
   return `<nav class="crumbs">${html}</nav>`;
 }
@@ -60,7 +60,7 @@ function crumbs(parts) {
 function renderHome() {
   const cards = manifest.subjects.map((s) => {
     const nQuiz = s.sections.reduce((a, sec) => a + sec.quizzes.length, 0);
-    return `<a class="card" href="#/s/${s.id}">
+    return `<a class="card" href="#/s/${esc(s.id)}">
       <div class="card__title">${esc(s.name)}</div>
       <div class="card__meta">${s.sections.length} 単元 ・ ${nQuiz} クイズ</div>
     </a>`;
@@ -74,7 +74,7 @@ function renderSubject(subjectId) {
   if (!subj) return renderHome();
   const cards = subj.sections.map((sec) => {
     const badge = bestBadge(sec.quizzes);
-    return `<a class="card" href="#/s/${subj.id}/${sec.id}">
+    return `<a class="card" href="#/s/${esc(subj.id)}/${esc(sec.id)}">
       <div class="card__title">${esc(sec.name)}</div>
       <div class="card__meta">${sec.quizzes.length} クイズ</div>
       ${badge}
@@ -102,13 +102,13 @@ function renderSection(subjectId, sectionId) {
       + (p.lastAttempt ? ` ・ 前回 ${p.lastAttempt.score}/${p.lastAttempt.total}` : "");
     const buttons = [];
     if (p.inProgress) {
-      buttons.push(`<button class="btn" data-act="resume" data-id="${q.id}">続きから (${p.inProgress.index + 1}問目)</button>`);
-      buttons.push(`<button class="btn ghost" data-act="restart" data-id="${q.id}">最初から</button>`);
+      buttons.push(`<button class="btn" data-act="resume" data-id="${esc(q.id)}">続きから (${p.inProgress.index + 1}問目)</button>`);
+      buttons.push(`<button class="btn ghost" data-act="restart" data-id="${esc(q.id)}">最初から</button>`);
     } else {
-      buttons.push(`<button class="btn" data-act="restart" data-id="${q.id}">はじめる</button>`);
+      buttons.push(`<button class="btn" data-act="restart" data-id="${esc(q.id)}">はじめる</button>`);
     }
     if (p.wrongIds && p.wrongIds.length) {
-      buttons.push(`<button class="btn secondary" data-act="review" data-id="${q.id}">間違いだけ復習 (${p.wrongIds.length})</button>`);
+      buttons.push(`<button class="btn secondary" data-act="review" data-id="${esc(q.id)}">間違いだけ復習 (${p.wrongIds.length})</button>`);
     }
     return `<div class="quizrow">
       <div class="quizrow__title">${esc(q.title)}</div>
@@ -163,8 +163,19 @@ async function startQuiz(quizId, mode) {
     answers = new Array(order.length).fill(null);
   } else {
     order = quiz.questions.map((_, i) => i);
-    if (prog.inProgress) { pos = prog.inProgress.index; answers = prog.inProgress.answers.slice(); }
-    else { answers = new Array(order.length).fill(null); }
+    // 保存済み進捗は、現在のクイズの問題数と整合する場合のみ再開に使う
+    // (クイズを作り直して問題数が変わると古い進捗で crash しうるため)
+    const ip = prog.inProgress;
+    const valid = ip && Number.isInteger(ip.index)
+      && Array.isArray(ip.answers) && ip.answers.length === order.length
+      && ip.index >= 0 && ip.index < order.length;
+    if (valid) {
+      pos = ip.index;
+      answers = ip.answers.slice();
+    } else {
+      if (ip) { delete prog.inProgress; saveProgress(quizId, prog); } // 壊れた/古い進捗は破棄
+      answers = new Array(order.length).fill(null);
+    }
   }
 
   session = { quizId, quiz, found, mode, order, pos, answers };

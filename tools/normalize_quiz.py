@@ -53,6 +53,23 @@ def clean_text(s):
     return re.sub(r"\$\s*([^$]*?)\s*\$", r"\1", str(s)).strip()
 
 
+def to_bool(v):
+    """真偽値らしき値を bool に。文字列の "false"/"0"/"no" 等も偽として扱う
+    (bool("false") が True になってしまう取り違えを防ぐ)。"""
+    if isinstance(v, str):
+        s = v.strip().lower()
+        if s in ("false", "0", "no", "n", "incorrect", "×", "x", ""):
+            return False
+        if s in ("true", "1", "yes", "y", "correct", "○", "o"):
+            return True
+    return bool(v)
+
+
+def valid_slug(s: str) -> bool:
+    """教科/単元/クイズID に使える安全な文字だけか(ディレクトリ名・URL・HTML属性になる)。"""
+    return bool(re.fullmatch(r"[A-Za-z0-9_-]+", s or ""))
+
+
 def find_questions(raw):
     """raw のどこかにある質問リストを返す。"""
     if isinstance(raw, list):
@@ -86,18 +103,20 @@ def normalize_choice(c):
             vals = [v for v in c.values() if isinstance(v, str)]
             text = vals[0] if vals else json.dumps(c, ensure_ascii=False)
         flag = first(c, CORRECT_FLAG_KEYS)
-        is_correct = bool(flag) if flag is not None else None
+        is_correct = to_bool(flag) if flag is not None else None
         rationale = first(c, CHOICE_RATIONALE_KEYS, default="")
         return str(text), is_correct, str(rationale)
     return str(c), None, ""
 
 
 def resolve_answer_index(q, choice_texts, correct_flags):
-    # 1) 選択肢自体に correct フラグがある場合
-    for i, f in enumerate(correct_flags):
-        if f:
-            return i
-    # 2) answer 系キーから判定
+    # 1) 選択肢自体に correct フラグがある場合（ちょうど1つだけ true を要求）
+    true_idxs = [i for i, f in enumerate(correct_flags) if f]
+    if len(true_idxs) == 1:
+        return true_idxs[0]
+    if len(true_idxs) > 1:
+        return None  # 複数が正解扱い＝曖昧。None を返してエラーにし、親に気づかせる
+    # 2) フラグが無い場合は answer 系キーから判定
     ans = first(q, ANSWER_KEYS)
     if ans is None:
         return None
@@ -221,6 +240,13 @@ def main() -> None:
     p.add_argument("--id", help="クイズ ID(省略時は <教科>-<節>-連番 を自動採番)")
     p.add_argument("--docs", default="docs", help="公開サイトのルート(既定 docs)")
     args = p.parse_args()
+
+    # スラッグ検証(ディレクトリ名・URL・HTML属性に使うため安全な文字に限定)
+    for label, val in (("--subject", args.subject), ("--section", args.section)):
+        if not valid_slug(val):
+            sys.exit(f"{label} は英数字・ハイフン・アンダースコアのみ使えます: {val!r}")
+    if args.id and not valid_slug(args.id):
+        sys.exit(f"--id は英数字・ハイフン・アンダースコアのみ使えます: {args.id!r}")
 
     raw = json.loads(Path(args.raw).read_text(encoding="utf-8"))
     questions = normalize(raw)
