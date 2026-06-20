@@ -5,32 +5,6 @@
       "name": "社会",
       "sections": [
         {
-          "id": "edo",
-          "name": "江戸時代",
-          "quizzes": [
-            {
-              "id": "shakai-edo-01",
-              "title": "江戸時代の基礎",
-              "count": 8,
-              "createdAt": "2026-06-20",
-              "path": "shakai/edo/shakai-edo-01.json"
-            }
-          ]
-        },
-        {
-          "id": "shakaihosho",
-          "name": "社会保障制度",
-          "quizzes": [
-            {
-              "id": "shakai-shakaihosho-01",
-              "title": "社会保障制度 基礎",
-              "count": 5,
-              "createdAt": "2026-06-20",
-              "path": "shakai/shakaihosho/shakai-shakaihosho-01.json"
-            }
-          ]
-        },
-        {
           "id": "koumin",
           "name": "公民",
           "quizzes": [
@@ -40,25 +14,6 @@
               "count": 10,
               "createdAt": "2026-06-20",
               "path": "shakai/koumin/shakai-koumin-01.json"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "id": "rika",
-      "name": "理科",
-      "sections": [
-        {
-          "id": "tenki",
-          "name": "天気",
-          "quizzes": [
-            {
-              "id": "rika-tenki-01",
-              "title": "天気のしくみ 基礎",
-              "count": 5,
-              "createdAt": "2026-06-20",
-              "path": "rika/tenki/rika-tenki-01.json"
             }
           ]
         }
