@@ -29,6 +29,19 @@
               "path": "shakai/shakaihosho/shakai-shakaihosho-01.json"
             }
           ]
+        },
+        {
+          "id": "koumin",
+          "name": "公民",
+          "quizzes": [
+            {
+              "id": "shakai-koumin-01",
+              "title": "公民クイズ",
+              "count": 10,
+              "createdAt": "2026-06-20",
+              "path": "shakai/koumin/shakai-koumin-01.json"
+            }
+          ]
         }
       ]
     },

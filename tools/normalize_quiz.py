@@ -29,12 +29,14 @@ from pathlib import Path
 
 Q_LIST_KEYS = ("questions", "items", "quiz", "data", "cards")
 Q_TEXT_KEYS = ("question", "prompt", "text", "stem", "title", "front")
-CHOICE_KEYS = ("choices", "options", "answers", "candidates", "distractors")
+# NotebookLM の実フォーマットは選択肢が "answerOptions"(各要素 text/isCorrect/rationale)
+CHOICE_KEYS = ("answerOptions", "choices", "options", "answers", "candidates", "distractors")
 CHOICE_TEXT_KEYS = ("text", "label", "option", "value", "content", "answer")
-CORRECT_FLAG_KEYS = ("correct", "is_correct", "isCorrect", "correctAnswer", "is_answer")
+CHOICE_RATIONALE_KEYS = ("rationale", "explanation", "feedback", "reason", "why")
+CORRECT_FLAG_KEYS = ("isCorrect", "correct", "is_correct", "is_answer")
 ANSWER_KEYS = ("answerIndex", "answer_index", "correctIndex", "correct_index",
                "answer", "correct", "correct_answer", "correctAnswer", "solution", "key")
-EXPLAIN_KEYS = ("explanation", "rationale", "feedback", "why", "reason", "back", "note")
+EXPLAIN_KEYS = ("explanation", "feedback", "why", "reason", "back", "note")
 
 
 def first(d: dict, keys, default=None):
@@ -42,6 +44,13 @@ def first(d: dict, keys, default=None):
         if isinstance(d, dict) and d.get(k) not in (None, ""):
             return d[k]
     return default
+
+
+def clean_text(s):
+    """NotebookLM が付ける数式デリミタ $...$ を除去(例: "第 $25$ 条" → "第 25 条")。"""
+    if not s:
+        return s
+    return re.sub(r"\$\s*([^$]*?)\s*\$", r"\1", str(s)).strip()
 
 
 def find_questions(raw):
@@ -67,9 +76,9 @@ def find_questions(raw):
 
 
 def normalize_choice(c):
-    """選択肢を (text, is_correct) に正規化。is_correct が無ければ None。"""
+    """選択肢を (text, is_correct, rationale) に正規化。is_correct が無ければ None。"""
     if isinstance(c, str):
-        return c, None
+        return c, None, ""
     if isinstance(c, dict):
         text = first(c, CHOICE_TEXT_KEYS)
         if text is None:
@@ -78,8 +87,9 @@ def normalize_choice(c):
             text = vals[0] if vals else json.dumps(c, ensure_ascii=False)
         flag = first(c, CORRECT_FLAG_KEYS)
         is_correct = bool(flag) if flag is not None else None
-        return str(text), is_correct
-    return str(c), None
+        rationale = first(c, CHOICE_RATIONALE_KEYS, default="")
+        return str(text), is_correct, str(rationale)
+    return str(c), None, ""
 
 
 def resolve_answer_index(q, choice_texts, correct_flags):
@@ -125,13 +135,19 @@ def normalize(raw) -> list[dict]:
     for n, q in enumerate(qs, 1):
         if not isinstance(q, dict):
             continue
-        text = first(q, Q_TEXT_KEYS)
+        text = clean_text(first(q, Q_TEXT_KEYS))
         raw_choices = first(q, CHOICE_KEYS, default=[])
         pairs = [normalize_choice(c) for c in raw_choices]
-        choice_texts = [p[0] for p in pairs]
+        choice_texts = [clean_text(p[0]) for p in pairs]
         correct_flags = [p[1] for p in pairs]
+        rationales = [p[2] for p in pairs]
         ans_idx = resolve_answer_index(q, choice_texts, correct_flags)
+
+        # 問題単位の explanation が無ければ、正解選択肢の rationale を解説に使う
         explanation = first(q, EXPLAIN_KEYS, default="")
+        if not explanation and ans_idx is not None and 0 <= ans_idx < len(rationales):
+            explanation = rationales[ans_idx]
+        explanation = clean_text(explanation)
 
         if not text or len(choice_texts) < 2 or ans_idx is None:
             sys.exit(
