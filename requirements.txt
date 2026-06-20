@@ -1,0 +1,3 @@
+# NotebookLM をプログラムから操作するための CLI/ライブラリ
+# (クイズ生成 generate quiz / download quiz に使用)
+notebooklm-py==0.3.4
