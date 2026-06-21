@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import random
 import re
 import sys
 from pathlib import Path
@@ -53,15 +54,16 @@ def clean_text(s):
     return re.sub(r"\$\s*([^$]*?)\s*\$", r"\1", str(s)).strip()
 
 
-def to_bool(v):
-    """真偽値らしき値を bool に。文字列の "false"/"0"/"no" 等も偽として扱う
-    (bool("false") が True になってしまう取り違えを防ぐ)。"""
+def to_bool(v: object) -> bool | None:
+    """真偽値らしき値を bool に変換。文字列の "false"/"0"/"no" 等は偽として扱う。
+    既知リスト外の文字列は None を返す(サイレントに True 化するのを防ぐ)。"""
     if isinstance(v, str):
         s = v.strip().lower()
         if s in ("false", "0", "no", "n", "incorrect", "×", "x", ""):
             return False
         if s in ("true", "1", "yes", "y", "correct", "○", "o"):
             return True
+        return None  # 未知の文字列はフラグ無しとして扱う
     return bool(v)
 
 
@@ -250,12 +252,22 @@ def main() -> None:
         sys.exit(f"--id は英数字・ハイフン・アンダースコアのみ使えます: {args.id!r}")
 
     # 出題月の正規化・検証 (YYYY-MM)
-    month_val = args.month or dt.date.today().strftime("%Y-%m")
-    if not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", month_val):
-        sys.exit(f"--month は YYYY-MM 形式で指定してください (例: 2026-06): {month_val!r}")
+    if args.month:
+        month_val = args.month
+        if not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", month_val):
+            sys.exit(f"--month は YYYY-MM 形式で指定してください (例: 2026-06): {month_val!r}")
+    else:
+        month_val = dt.date.today().strftime("%Y-%m")
+        print(f"[警告] --month が省略されました。今月 {month_val} を使います"
+              f"（再取り込み時は --month を明示してください）。", file=sys.stderr)
 
     raw = json.loads(Path(args.raw).read_text(encoding="utf-8"))
     questions = normalize(raw)
+    # NotebookLM は正解を先頭に並べるため、選択肢をシャッフルして answerIndex を再計算
+    for q in questions:
+        correct = q["choices"][q["answerIndex"]]
+        random.shuffle(q["choices"])
+        q["answerIndex"] = q["choices"].index(correct)
 
     docs = Path(args.docs)
     manifest_path = docs / "quizzes" / "manifest.json"

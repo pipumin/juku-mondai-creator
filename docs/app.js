@@ -102,13 +102,11 @@ function renderSection(subjectId, sectionId, monthFilter) {
   if (!sec) return renderSubject(subjectId);
 
   const months = [...new Set(sec.quizzes.map((q) => q.month).filter(Boolean))].sort();
-  const filtered = (monthFilter && months.includes(monthFilter))
-    ? sec.quizzes.filter((q) => q.month === monthFilter)
-    : sec.quizzes;
   const activeMonth = (monthFilter && months.includes(monthFilter)) ? monthFilter : null;
+  const filtered = activeMonth ? sec.quizzes.filter((q) => q.month === activeMonth) : sec.quizzes;
 
   let pillsHtml = "";
-  if (months.length > 1) {
+  if (months.length > 1 || activeMonth) {
     const base = `#/s/${esc(subj.id)}/${esc(sec.id)}`;
     const pills = [
       `<a class="pill${!activeMonth ? " pill--active" : ""}" href="${base}">全て</a>`,
@@ -122,9 +120,14 @@ function renderSection(subjectId, sectionId, monthFilter) {
   const rows = filtered.map((q) => {
     const p = loadProgress(q.id);
     const meta = `全 ${q.count} 問`
-      + (p.lastAttempt ? ` ・ 前回 ${p.lastAttempt.score}/${p.lastAttempt.total}` : "");
+      + (p.lastAttempt ? ` ・ 前回 ${esc(p.lastAttempt.score)}/${esc(p.lastAttempt.total)}` : "");
     const buttons = [];
-    if (p.inProgress) {
+    const resumeValid = p.inProgress
+      && Array.isArray(p.inProgress.answers)
+      && p.inProgress.answers.length === q.count
+      && Number.isInteger(p.inProgress.index)
+      && p.inProgress.index >= 0 && p.inProgress.index < q.count;
+    if (resumeValid) {
       buttons.push(`<button class="btn" data-act="resume" data-id="${esc(q.id)}">続きから (${p.inProgress.index + 1}問目)</button>`);
       buttons.push(`<button class="btn ghost" data-act="restart" data-id="${esc(q.id)}">最初から</button>`);
     } else {
@@ -177,6 +180,14 @@ async function startQuiz(quizId, mode) {
     return;
   }
 
+  // 選択肢をこのセッション用にシャッフル（毎回異なる順序で出題）
+  quiz.questions = quiz.questions.map((q) => {
+    const correct = q.choices[q.answerIndex];
+    const choices = [...q.choices].sort(() => Math.random() - 0.5);
+    return { ...q, choices, answerIndex: choices.indexOf(correct) };
+  });
+  const shuffleKey = quiz.questions.map((q) => q.answerIndex).join(",");
+
   const prog = loadProgress(quizId);
   let order, pos = 0, answers = [];
 
@@ -190,7 +201,8 @@ async function startQuiz(quizId, mode) {
     // 保存済み進捗は、現在のクイズの問題数と整合する場合のみ再開に使う
     // (クイズを作り直して問題数が変わると古い進捗で crash しうるため)
     const ip = prog.inProgress;
-    const valid = ip && Number.isInteger(ip.index)
+    const valid = ip && ip.shuffleKey === shuffleKey
+      && Number.isInteger(ip.index)
       && Array.isArray(ip.answers) && ip.answers.length === order.length
       && ip.index >= 0 && ip.index < order.length;
     if (valid) {
@@ -202,7 +214,7 @@ async function startQuiz(quizId, mode) {
     }
   }
 
-  session = { quizId, quiz, found, mode, order, pos, answers };
+  session = { quizId, quiz, found, mode, order, pos, answers, shuffleKey };
   renderQuestion();
 }
 
@@ -265,7 +277,7 @@ function onAnswer(choiceIndex) {
   if (s.mode !== "review") {
     // 中断しても再開できるよう、回答のたびに進捗を保存
     const p = loadProgress(s.quizId);
-    p.inProgress = { index: s.pos, answers: s.answers };
+    p.inProgress = { index: s.pos, answers: s.answers, shuffleKey: s.shuffleKey };
     saveProgress(s.quizId, p);
   }
   renderQuestion();
@@ -277,7 +289,7 @@ function onNext() {
     s.pos += 1;
     if (s.mode !== "review") {
       const p = loadProgress(s.quizId);
-      p.inProgress = { index: s.pos, answers: s.answers };
+      p.inProgress = { index: s.pos, answers: s.answers, shuffleKey: s.shuffleKey };
       saveProgress(s.quizId, p);
     }
     renderQuestion();
@@ -327,7 +339,7 @@ function renderResult(score) {
   const back = `#/s/${s.found.subject.id}/${s.found.section.id}`;
   const buttons = [`<button class="btn" id="again">もう一度</button>`];
   if (wrong.length) buttons.push(`<button class="btn secondary" id="review">間違いだけ復習 (${wrong.length})</button>`);
-  buttons.push(`<a class="btn ghost" href="${back}">クイズ一覧へ</a>`);
+  buttons.push(`<a class="btn ghost" href="${esc(back)}">クイズ一覧へ</a>`);
 
   app.innerHTML = crumbs([
     { label: "教科", href: "#/" },
