@@ -91,12 +91,35 @@ function bestBadge(quizzes) {
   return done ? '<span class="badge">挑戦ずみ</span>' : "";
 }
 
-function renderSection(subjectId, sectionId) {
+function monthLabel(ym) {
+  // "2026-06" → "6月"
+  return parseInt(ym.split("-")[1], 10) + "月";
+}
+
+function renderSection(subjectId, sectionId, monthFilter) {
   const subj = findSubject(subjectId);
   const sec = findSection(subj, sectionId);
   if (!sec) return renderSubject(subjectId);
 
-  const rows = sec.quizzes.map((q) => {
+  const months = [...new Set(sec.quizzes.map((q) => q.month).filter(Boolean))].sort();
+  const filtered = (monthFilter && months.includes(monthFilter))
+    ? sec.quizzes.filter((q) => q.month === monthFilter)
+    : sec.quizzes;
+  const activeMonth = (monthFilter && months.includes(monthFilter)) ? monthFilter : null;
+
+  let pillsHtml = "";
+  if (months.length > 1) {
+    const base = `#/s/${esc(subj.id)}/${esc(sec.id)}`;
+    const pills = [
+      `<a class="pill${!activeMonth ? " pill--active" : ""}" href="${base}">全て</a>`,
+      ...months.map((m) =>
+        `<a class="pill${activeMonth === m ? " pill--active" : ""}" href="${base}/${esc(m)}">${monthLabel(m)}</a>`
+      ),
+    ].join("");
+    pillsHtml = `<div class="filter-pills">${pills}</div>`;
+  }
+
+  const rows = filtered.map((q) => {
     const p = loadProgress(q.id);
     const meta = `全 ${q.count} 問`
       + (p.lastAttempt ? ` ・ 前回 ${p.lastAttempt.score}/${p.lastAttempt.total}` : "");
@@ -123,6 +146,7 @@ function renderSection(subjectId, sectionId) {
     { label: sec.name },
   ])
     + `<h1 class="page-title">${esc(sec.name)}</h1>`
+    + pillsHtml
     + `<div class="grid">${rows || '<p class="empty">クイズがありません。</p>'}</div>`;
 
   app.querySelectorAll("button[data-act]").forEach((b) => {
@@ -339,6 +363,7 @@ function route() {
   if (parts.length === 0) return renderHome();
   if (parts[0] === "s" && parts.length === 2) return renderSubject(parts[1]);
   if (parts[0] === "s" && parts.length === 3) return renderSection(parts[1], parts[2]);
+  if (parts[0] === "s" && parts.length === 4) return renderSection(parts[1], parts[2], parts[3]);
   if (parts[0] === "play" && parts[1]) {
     const mode = parts[2] === "review" ? "review" : "normal";
     return startQuiz(parts[1], mode);

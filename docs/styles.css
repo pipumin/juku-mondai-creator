@@ -184,3 +184,20 @@ h2.section-head { font-size: 1.05rem; color: var(--muted); margin: 0 0 10px; }
 .review-item .exp { color: var(--muted); margin-top: 4px; font-size: .92rem; }
 
 .empty { color: var(--muted); text-align: center; padding: 40px 0; }
+
+/* ---- month filter pills ---- */
+.filter-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.pill {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: .9rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1.5px solid var(--line);
+  color: var(--muted);
+  background: #fff;
+  transition: border-color .1s, color .1s;
+}
+.pill:hover { border-color: var(--blue); color: var(--blue); }
+.pill--active { background: var(--blue); color: #fff; border-color: var(--blue); }

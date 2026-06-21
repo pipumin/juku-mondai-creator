@@ -237,6 +237,7 @@ def main() -> None:
     p.add_argument("--section", required=True, help="単元スラッグ (例 edo)")
     p.add_argument("--section-name", default="", help="単元の表示名 (例 江戸時代)")
     p.add_argument("--title", required=True, help="クイズの表示名")
+    p.add_argument("--month", help="出題月 YYYY-MM (省略時は今月)")
     p.add_argument("--id", help="クイズ ID(省略時は <教科>-<節>-連番 を自動採番)")
     p.add_argument("--docs", default="docs", help="公開サイトのルート(既定 docs)")
     args = p.parse_args()
@@ -247,6 +248,11 @@ def main() -> None:
             sys.exit(f"{label} は英数字・ハイフン・アンダースコアのみ使えます: {val!r}")
     if args.id and not valid_slug(args.id):
         sys.exit(f"--id は英数字・ハイフン・アンダースコアのみ使えます: {args.id!r}")
+
+    # 出題月の正規化・検証 (YYYY-MM)
+    month_val = args.month or dt.date.today().strftime("%Y-%m")
+    if not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", month_val):
+        sys.exit(f"--month は YYYY-MM 形式で指定してください (例: 2026-06): {month_val!r}")
 
     raw = json.loads(Path(args.raw).read_text(encoding="utf-8"))
     questions = normalize(raw)
@@ -282,6 +288,7 @@ def main() -> None:
         "id": quiz_id,
         "title": args.title,
         "count": len(questions),
+        "month": month_val,
         "createdAt": quiz_obj["createdAt"],
         "path": rel_path,
     }
