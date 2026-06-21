@@ -10,19 +10,27 @@
           "quizzes": [
             {
               "id": "shakai-koumin-01",
-              "title": "公民クイズ",
-              "count": 10,
-              "month": "2026-06",
-              "createdAt": "2026-06-20",
+              "title": "4月社会_公民クイズ",
+              "count": 30,
+              "month": "2026-04",
+              "createdAt": "2026-06-21",
               "path": "shakai/koumin/shakai-koumin-01.json"
             },
             {
               "id": "shakai-koumin-02",
-              "title": "日本国憲法クイズ",
-              "count": 30,
-              "month": "2026-06",
+              "title": "5月社会_公民クイズ",
+              "count": 25,
+              "month": "2026-05",
               "createdAt": "2026-06-21",
               "path": "shakai/koumin/shakai-koumin-02.json"
+            },
+            {
+              "id": "shakai-koumin-03",
+              "title": "6月社会_公民クイズ",
+              "count": 20,
+              "month": "2026-06",
+              "createdAt": "2026-06-21",
+              "path": "shakai/koumin/shakai-koumin-03.json"
             }
           ]
         },
@@ -32,9 +40,9 @@
           "quizzes": [
             {
               "id": "shakai-chiri-01",
-              "title": "九州地方クイズ",
+              "title": "4月社会_地理クイズ",
               "count": 30,
-              "month": "2026-06",
+              "month": "2026-04",
               "createdAt": "2026-06-21",
               "path": "shakai/chiri/shakai-chiri-01.json"
             }
