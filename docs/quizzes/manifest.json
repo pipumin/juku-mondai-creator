@@ -14,6 +14,26 @@
               "count": 10,
               "createdAt": "2026-06-20",
               "path": "shakai/koumin/shakai-koumin-01.json"
+            },
+            {
+              "id": "shakai-koumin-02",
+              "title": "日本国憲法クイズ",
+              "count": 30,
+              "createdAt": "2026-06-21",
+              "path": "shakai/koumin/shakai-koumin-02.json"
+            }
+          ]
+        },
+        {
+          "id": "chiri",
+          "name": "地理",
+          "quizzes": [
+            {
+              "id": "shakai-chiri-01",
+              "title": "九州地方クイズ",
+              "count": 30,
+              "createdAt": "2026-06-21",
+              "path": "shakai/chiri/shakai-chiri-01.json"
             }
           ]
         }
