@@ -47,6 +47,20 @@
               "path": "shakai/chiri/shakai-chiri-01.json"
             }
           ]
+        },
+        {
+          "id": "rekishi",
+          "name": "歴史",
+          "quizzes": [
+            {
+              "id": "shakai-rekishi-01",
+              "title": "4月社会_歴史クイズ",
+              "count": 5,
+              "month": "2026-04",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-01.json"
+            }
+          ]
         }
       ]
     }

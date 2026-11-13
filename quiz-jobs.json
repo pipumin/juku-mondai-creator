@@ -3,7 +3,8 @@
   "names": {
     "shakai": "社会",
     "shakai/koumin": "公民",
-    "shakai/chiri": "地理"
+    "shakai/chiri": "地理",
+    "shakai/rekishi": "歴史"
   },
   "prompt": [
     "あなたは中学受験(小6)の作問者です。アップロードした教材のうち【範囲】の内容だけを使って、4択クイズを作成してください。",
@@ -43,6 +44,13 @@
       "month": "2026-04",
       "raw": "data/raw/4gatsu-chiri.json",
       "range": "日本の地方・農業（地理）"
+    },
+    {
+      "id": "shakai-rekishi-01",
+      "title": "4月社会_歴史クイズ",
+      "month": "2026-04",
+      "source": "小6EXE_4月_社会.pdf",
+      "range": "鎌倉時代（歴史）"
     }
   ]
 }
