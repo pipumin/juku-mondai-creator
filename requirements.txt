@@ -1,3 +1,5 @@
 # NotebookLM をプログラムから操作するための CLI/ライブラリ
 # (クイズ生成 generate quiz / download quiz に使用)
 notebooklm-py==0.3.4
+# PDF 分割ツール (tools/split_pdf.py) で使用。PyPDF2 の後継・Python 3.12 対応
+pypdf>=4

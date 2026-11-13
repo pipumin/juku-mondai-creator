@@ -15,7 +15,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from pypdf import PdfReader, PdfWriter
+from pypdf import PdfReader, PdfWriter  # pypdf: PyPDF2後継、Python 3.12対応・メンテ継続中
 
 
 def parse_range(spec: str) -> tuple[str, int, int]:
