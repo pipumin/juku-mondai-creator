@@ -238,6 +238,97 @@ def update_manifest(manifest_path: Path, *, subject_id, subject_name,
     return sec
 
 
+# 教材が手元にないと解けない/意味が通らない表現 (例:「教材によると」「資料にないもの」)
+SOURCE_WORDS = ("教材", "資料", "テキスト", "ソース", "本文", "練習問題")
+
+
+def check_questions(questions: list[dict]) -> list[str]:
+    """正規化後の問題を機械的に検査し、人が見直すべき点を文章のリストで返す。"""
+    warns = []
+    seen = {}
+    for q in questions:
+        qid = q["id"]
+        texts = [q["question"], *q["choices"], q["explanation"], *q["rationales"], q["hint"]]
+        joined = " ".join(texts)
+        words = [w for w in SOURCE_WORDS if w in joined]
+        if words:
+            warns.append(f"{qid}: 教材を前提にした表現があります ({'・'.join(words)}): {q['question'][:40]}")
+        if "\\" in joined or "$" in joined:
+            warns.append(f"{qid}: 数式記法が残っています (\\ や $): {q['question'][:40]}")
+        if len(q["choices"]) != 4:
+            warns.append(f"{qid}: 選択肢が {len(q['choices'])} 個です (4個を想定)")
+        if len(set(q["choices"])) != len(q["choices"]):
+            warns.append(f"{qid}: 同じ文言の選択肢があります")
+        if not q["explanation"]:
+            warns.append(f"{qid}: 解説がありません")
+        key = re.sub(r"\W", "", q["question"])
+        if key in seen:
+            warns.append(f"{qid}: {seen[key]} と問題文が同じです")
+        seen[key] = qid
+    return warns
+
+
+def import_quiz(raw_path, *, subject, section, title, month, quiz_id=None,
+                subject_name="", section_name="", docs="docs"):
+    """raw JSON 1本を正規化して docs/quizzes/ に書き、manifest.json を更新する。
+    戻り値は (出力パス, クイズID, 問題リスト)。変換できない場合は SystemExit。"""
+    raw = json.loads(Path(raw_path).read_text(encoding="utf-8"))
+    questions = normalize(raw)
+    # NotebookLM は正解を先頭に並べるため、選択肢をシャッフルして answerIndex を再計算
+    # (choices と rationales は同じ並びで動かす)
+    for q in questions:
+        order = list(range(len(q["choices"])))
+        random.shuffle(order)
+        q["choices"] = [q["choices"][i] for i in order]
+        q["rationales"] = [q["rationales"][i] for i in order]
+        q["answerIndex"] = order.index(q["answerIndex"])
+
+    docs = Path(docs)
+    manifest_path = docs / "quizzes" / "manifest.json"
+
+    # ID 採番のため、まず既存マニフェストの該当セクションを読む
+    existing = {"quizzes": []}
+    if manifest_path.exists():
+        m = json.loads(manifest_path.read_text(encoding="utf-8"))
+        subj = next((s for s in m.get("subjects", []) if s["id"] == subject), None)
+        if subj:
+            existing = next((x for x in subj["sections"] if x["id"] == section), existing)
+    quiz_id = quiz_id or next_quiz_id(existing, subject, section)
+
+    rel_path = f"{subject}/{section}/{quiz_id}.json"
+    out_path = docs / "quizzes" / rel_path
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 同じ ID の再取り込みでは、最初の作成日を引き継ぐ
+    created_at = dt.date.today().isoformat()
+    if out_path.exists():
+        created_at = json.loads(out_path.read_text(encoding="utf-8")).get("createdAt", created_at)
+
+    quiz_obj = {
+        "id": quiz_id,
+        "subject": subject,
+        "section": section,
+        "title": title,
+        "createdAt": created_at,
+        "questions": questions,
+    }
+    out_path.write_text(json.dumps(quiz_obj, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8")
+
+    quiz_entry = {
+        "id": quiz_id,
+        "title": title,
+        "count": len(questions),
+        "month": month,
+        "createdAt": created_at,
+        "path": rel_path,
+    }
+    update_manifest(manifest_path, subject_id=subject, subject_name=subject_name,
+                    section_id=section, section_name=section_name,
+                    quiz_entry=quiz_entry)
+    return out_path, quiz_id, questions
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="NotebookLM クイズ raw JSON をアプリ用に正規化")
     p.add_argument("raw", help="NotebookLM からダウンロードした raw quiz JSON")
@@ -268,64 +359,15 @@ def main() -> None:
         print(f"[警告] --month が省略されました。今月 {month_val} を使います"
               f"（再取り込み時は --month を明示してください）。", file=sys.stderr)
 
-    raw = json.loads(Path(args.raw).read_text(encoding="utf-8"))
-    questions = normalize(raw)
-    # NotebookLM は正解を先頭に並べるため、選択肢をシャッフルして answerIndex を再計算
-    # (choices と rationales は同じ並びで動かす)
-    for q in questions:
-        order = list(range(len(q["choices"])))
-        random.shuffle(order)
-        q["choices"] = [q["choices"][i] for i in order]
-        q["rationales"] = [q["rationales"][i] for i in order]
-        q["answerIndex"] = order.index(q["answerIndex"])
-
-    docs = Path(args.docs)
-    manifest_path = docs / "quizzes" / "manifest.json"
-
-    # ID 採番のため、まず既存マニフェストの該当セクションを読む
-    existing = {"quizzes": []}
-    if manifest_path.exists():
-        m = json.loads(manifest_path.read_text(encoding="utf-8"))
-        subj = next((s for s in m.get("subjects", []) if s["id"] == args.subject), None)
-        if subj:
-            existing = next((x for x in subj["sections"] if x["id"] == args.section), existing)
-    quiz_id = args.id or next_quiz_id(existing, args.subject, args.section)
-
-    rel_path = f"{args.subject}/{args.section}/{quiz_id}.json"
-    out_path = docs / "quizzes" / rel_path
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # 同じ ID の再取り込みでは、最初の作成日を引き継ぐ
-    created_at = dt.date.today().isoformat()
-    if out_path.exists():
-        created_at = json.loads(out_path.read_text(encoding="utf-8")).get("createdAt", created_at)
-
-    quiz_obj = {
-        "id": quiz_id,
-        "subject": args.subject,
-        "section": args.section,
-        "title": args.title,
-        "createdAt": created_at,
-        "questions": questions,
-    }
-    out_path.write_text(json.dumps(quiz_obj, ensure_ascii=False, indent=2) + "\n",
-                        encoding="utf-8")
-
-    quiz_entry = {
-        "id": quiz_id,
-        "title": args.title,
-        "count": len(questions),
-        "month": month_val,
-        "createdAt": quiz_obj["createdAt"],
-        "path": rel_path,
-    }
-    update_manifest(manifest_path, subject_id=args.subject, subject_name=args.subject_name,
-                    section_id=args.section, section_name=args.section_name,
-                    quiz_entry=quiz_entry)
+    out_path, quiz_id, questions = import_quiz(
+        args.raw, subject=args.subject, subject_name=args.subject_name,
+        section=args.section, section_name=args.section_name,
+        title=args.title, month=month_val, quiz_id=args.id, docs=args.docs)
 
     print(f"作成: {out_path}  ({len(questions)} 問)")
-    print(f"更新: {manifest_path}")
     print(f"クイズ ID: {quiz_id}")
+    for w in check_questions(questions):
+        print(f"[要確認] {w}")
 
 
 if __name__ == "__main__":

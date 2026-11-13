@@ -1,5 +1,4 @@
-# NotebookLM をプログラムから操作するための CLI/ライブラリ
-# (クイズ生成 generate quiz / download quiz に使用)
-notebooklm-py==0.3.4
+# NotebookLM を操作する CLI (notebooklm-py) は pipx で別に入れる:
+#   pipx install "notebooklm-py[browser]"
 # PDF 分割ツール (tools/split_pdf.py) で使用。PyPDF2 の後継・Python 3.12 対応
 pypdf>=4
