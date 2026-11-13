@@ -180,16 +180,30 @@ async function startQuiz(quizId, mode) {
     return;
   }
 
-  // 選択肢をこのセッション用にシャッフル（毎回異なる順序で出題）
-  quiz.questions = quiz.questions.map((q) => {
-    const correct = q.choices[q.answerIndex];
-    const choices = [...q.choices].sort(() => Math.random() - 0.5);
-    return { ...q, choices, answerIndex: choices.indexOf(correct) };
-  });
-  const shuffleKey = quiz.questions.map((q) => q.answerIndex).join(",");
-
   const prog = loadProgress(quizId);
   let order, pos = 0, answers = [];
+
+  // 「続きから」は、保存済み進捗が現在のクイズと整合する場合のみ使う
+  // (クイズを作り直して問題数・選択肢数が変わると古い進捗で crash しうるため)
+  const ip = prog.inProgress;
+  const resume = mode !== "review" && ip
+    && validPerms(ip.perms, quiz.questions)
+    && Number.isInteger(ip.index)
+    && Array.isArray(ip.answers) && ip.answers.length === quiz.questions.length
+    && ip.index >= 0 && ip.index < quiz.questions.length;
+
+  // 選択肢の並び順(perms)。新規は毎回シャッフルし、再開時は中断したときの並びを復元する
+  const perms = resume ? ip.perms : quiz.questions.map((q) => shuffledIndexes(q.choices.length));
+  quiz.questions = quiz.questions.map((q, i) => {
+    const perm = perms[i];
+    const notes = q.rationales || [];
+    return {
+      ...q,
+      choices: perm.map((k) => q.choices[k]),
+      rationales: perm.map((k) => notes[k] || ""),
+      answerIndex: perm.indexOf(q.answerIndex),
+    };
+  });
 
   if (mode === "review") {
     const wrong = new Set(prog.wrongIds || []);
@@ -198,14 +212,7 @@ async function startQuiz(quizId, mode) {
     answers = new Array(order.length).fill(null);
   } else {
     order = quiz.questions.map((_, i) => i);
-    // 保存済み進捗は、現在のクイズの問題数と整合する場合のみ再開に使う
-    // (クイズを作り直して問題数が変わると古い進捗で crash しうるため)
-    const ip = prog.inProgress;
-    const valid = ip && ip.shuffleKey === shuffleKey
-      && Number.isInteger(ip.index)
-      && Array.isArray(ip.answers) && ip.answers.length === order.length
-      && ip.index >= 0 && ip.index < order.length;
-    if (valid) {
+    if (resume) {
       pos = ip.index;
       answers = ip.answers.slice();
     } else {
@@ -214,8 +221,32 @@ async function startQuiz(quizId, mode) {
     }
   }
 
-  session = { quizId, quiz, found, mode, order, pos, answers, shuffleKey };
+  session = { quizId, quiz, found, mode, order, pos, answers, perms, hintShown: false };
   renderQuestion();
+}
+
+// 0..n-1 をランダムに並べた配列 (Fisher–Yates)
+function shuffledIndexes(n) {
+  const a = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 保存されていた並び順が、現在の各問題の選択肢数に合う順列かを確かめる
+function validPerms(perms, questions) {
+  return Array.isArray(perms) && perms.length === questions.length
+    && perms.every((p, i) => Array.isArray(p) && p.length === questions[i].choices.length
+      && [...p].sort((x, y) => x - y).every((v, k) => v === k));
+}
+
+function saveInProgress() {
+  const s = session;
+  const p = loadProgress(s.quizId);
+  p.inProgress = { index: s.pos, answers: s.answers, perms: s.perms };
+  saveProgress(s.quizId, p);
 }
 
 function renderQuestion() {
@@ -235,13 +266,28 @@ function renderQuestion() {
     return `<button class="${cls}" data-i="${i}" ${answered ? "disabled" : ""}>${esc(c)}${mark}</button>`;
   }).join("");
 
+  // ヒントは答える前だけ。押すまでは隠しておく
+  let hint = "";
+  if (!answered && q.hint) {
+    hint = s.hintShown
+      ? `<div class="hint">💡 ${esc(q.hint)}</div>`
+      : `<button class="btn ghost hintbtn" id="hint">💡 ヒントを見る</button>`;
+  }
+
   let feedback = "";
   let actions = "";
   if (answered) {
-    const ok = s.answers[s.pos] === q.answerIndex;
+    const your = s.answers[s.pos];
+    const ok = your === q.answerIndex;
+    // 間違えたときは「選んだ答えがなぜ違うか」を先に見せ、そのあと正解の解説を出す
+    const why = !ok && q.rationales[your]
+      ? `<div class="feedback__why"><b>「${esc(q.choices[your])}」がちがう理由</b><br>${esc(q.rationales[your])}</div>`
+      : "";
+    const answerLine = ok ? "" : `<b>正解は「${esc(q.choices[q.answerIndex])}」</b><br>`;
     feedback = `<div class="feedback ${ok ? "ok" : "ng"}">
       <div class="feedback__head">${ok ? "正解!" : "ざんねん…"}</div>
-      <div class="feedback__exp">${esc(q.explanation || "")}</div>
+      ${why}
+      <div class="feedback__exp">${answerLine}${esc(q.explanation || "")}</div>
     </div>`;
     const last = s.pos === s.order.length - 1;
     actions = `<div class="actions"><button class="btn full" id="next">${last ? "結果を見る" : "次へ"}</button></div>`;
@@ -260,12 +306,14 @@ function renderQuestion() {
       </div>`
     + `<div class="qtext">${esc(q.question)}</div>`
     + `<div class="choices">${choices}</div>`
-    + feedback + actions;
+    + hint + feedback + actions;
 
   if (!answered) {
     app.querySelectorAll(".choice").forEach((b) => {
       b.addEventListener("click", () => onAnswer(parseInt(b.dataset.i, 10)));
     });
+    const hb = document.getElementById("hint");
+    if (hb) hb.addEventListener("click", () => { s.hintShown = true; renderQuestion(); });
   } else {
     document.getElementById("next").addEventListener("click", onNext);
   }
@@ -274,12 +322,8 @@ function renderQuestion() {
 function onAnswer(choiceIndex) {
   const s = session;
   s.answers[s.pos] = choiceIndex;
-  if (s.mode !== "review") {
-    // 中断しても再開できるよう、回答のたびに進捗を保存
-    const p = loadProgress(s.quizId);
-    p.inProgress = { index: s.pos, answers: s.answers, shuffleKey: s.shuffleKey };
-    saveProgress(s.quizId, p);
-  }
+  // 中断しても再開できるよう、回答のたびに進捗を保存
+  if (s.mode !== "review") saveInProgress();
   renderQuestion();
 }
 
@@ -287,11 +331,8 @@ function onNext() {
   const s = session;
   if (s.pos < s.order.length - 1) {
     s.pos += 1;
-    if (s.mode !== "review") {
-      const p = loadProgress(s.quizId);
-      p.inProgress = { index: s.pos, answers: s.answers, shuffleKey: s.shuffleKey };
-      saveProgress(s.quizId, p);
-    }
+    s.hintShown = false;
+    if (s.mode !== "review") saveInProgress();
     renderQuestion();
   } else {
     finishQuiz();
@@ -332,6 +373,7 @@ function renderResult(score) {
     <div class="review-item">
       <div class="q">${esc(q.question)}</div>
       <div class="line your">あなたの解答: ${your != null ? esc(q.choices[your]) : "(無回答)"}</div>
+      ${your != null && q.rationales[your] ? `<div class="exp">ちがう理由: ${esc(q.rationales[your])}</div>` : ""}
       <div class="line ans">正解: ${esc(q.choices[q.answerIndex])}</div>
       <div class="exp">${esc(q.explanation || "")}</div>
     </div>`).join("");
@@ -356,8 +398,10 @@ function renderResult(score) {
   const quizId = s.quizId;
   document.getElementById("again").addEventListener("click", () => {
     const p = loadProgress(quizId); delete p.inProgress; saveProgress(quizId, p);
-    location.hash = `#/play/${quizId}`;
-    route(); // ハッシュが同一でも再描画
+    // ハッシュが同一なら hashchange が起きないので自分で再描画する
+    // (復習モードからはハッシュが変わるので、両方やると二重に開始してしまう)
+    if (location.hash === `#/play/${quizId}`) route();
+    else location.hash = `#/play/${quizId}`;
   });
   const rv = document.getElementById("review");
   if (rv) rv.addEventListener("click", () => {

@@ -48,10 +48,14 @@ def first(d: dict, keys, default=None):
 
 
 def clean_text(s):
-    """NotebookLM が付ける数式デリミタ $...$ を除去(例: "第 $25$ 条" → "第 25 条")。"""
+    """NotebookLM が付ける数式記法を読める文字に直す。
+    - デリミタ $...$ を除去(例: "第 $25$ 条" → "第 25 条")
+    - 分数 \\frac{2}{3} を「3分の2」に変換(アプリは数式を描画しないため)"""
     if not s:
         return s
-    return re.sub(r"\$\s*([^$]*?)\s*\$", r"\1", str(s)).strip()
+    s = re.sub(r"\$\s*([^$]*?)\s*\$", r"\1", str(s))
+    s = re.sub(r"\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}", r"\2分の\1", s)
+    return s.strip()
 
 
 def to_bool(v: object) -> bool | None:
@@ -182,6 +186,9 @@ def normalize(raw) -> list[dict]:
             "choices": choice_texts,
             "answerIndex": ans_idx,
             "explanation": str(explanation).strip(),
+            # 選択肢ごとの「なぜ正解/不正解か」(choices と同じ並び)。誤答時の解説に使う
+            "rationales": [clean_text(r) or "" for r in rationales],
+            "hint": clean_text(first(q, ("hint",), default="")) or "",
         })
     return out
 
@@ -264,10 +271,13 @@ def main() -> None:
     raw = json.loads(Path(args.raw).read_text(encoding="utf-8"))
     questions = normalize(raw)
     # NotebookLM は正解を先頭に並べるため、選択肢をシャッフルして answerIndex を再計算
+    # (choices と rationales は同じ並びで動かす)
     for q in questions:
-        correct = q["choices"][q["answerIndex"]]
-        random.shuffle(q["choices"])
-        q["answerIndex"] = q["choices"].index(correct)
+        order = list(range(len(q["choices"])))
+        random.shuffle(order)
+        q["choices"] = [q["choices"][i] for i in order]
+        q["rationales"] = [q["rationales"][i] for i in order]
+        q["answerIndex"] = order.index(q["answerIndex"])
 
     docs = Path(args.docs)
     manifest_path = docs / "quizzes" / "manifest.json"
@@ -285,12 +295,17 @@ def main() -> None:
     out_path = docs / "quizzes" / rel_path
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # 同じ ID の再取り込みでは、最初の作成日を引き継ぐ
+    created_at = dt.date.today().isoformat()
+    if out_path.exists():
+        created_at = json.loads(out_path.read_text(encoding="utf-8")).get("createdAt", created_at)
+
     quiz_obj = {
         "id": quiz_id,
         "subject": args.subject,
         "section": args.section,
         "title": args.title,
-        "createdAt": dt.date.today().isoformat(),
+        "createdAt": created_at,
         "questions": questions,
     }
     out_path.write_text(json.dumps(quiz_obj, ensure_ascii=False, indent=2) + "\n",
