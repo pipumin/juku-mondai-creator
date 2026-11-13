@@ -6,8 +6,10 @@
    将来ログインで profile を切り替え、保存先をクラウドへ差し替えられるよう
    進捗の読み書きは loadProgress/saveProgress に集約している。 */
 
-const PROFILE = "default";
 const app = document.getElementById("app");
+const whoBtn = document.getElementById("who");
+
+let profile = null;           // いま使っている人 {id, name}。下記「利用者」参照
 
 let manifest = null;          // quizzes/manifest.json の中身
 let session = null;           // 出題中の状態。下記 startQuiz 参照
@@ -25,8 +27,41 @@ async function fetchJSON(url) {
   return res.json();
 }
 
+/* --- 利用者 (localStorage) ---
+   名前を選ぶだけの切り替え。パスワードもサーバーも無く、名前と進捗はこのブラウザの中だけにある。
+   最初に登録した人の id は "default" にして、利用者機能が無かった頃の進捗を引き継ぐ。 */
+function loadProfiles() {
+  try {
+    const list = JSON.parse(localStorage.getItem("profiles"));
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+function selectProfile(id) {
+  localStorage.setItem("currentProfile", id);
+  profile = loadProfiles().find((p) => p.id === id) || null;
+}
+function addProfile(name) {
+  const list = loadProfiles();
+  const id = list.length === 0 ? "default" : "u" + Date.now().toString(36);
+  list.push({ id, name });
+  localStorage.setItem("profiles", JSON.stringify(list));
+  selectProfile(id);
+}
+function deleteProfile(id) {
+  // その人の進捗もまとめて消す
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith(`progress:${id}:`))
+    .forEach((k) => localStorage.removeItem(k));
+  const list = loadProfiles().filter((p) => p.id !== id);
+  localStorage.setItem("profiles", JSON.stringify(list));
+  if (profile && profile.id === id) {
+    if (list.length) selectProfile(list[0].id);
+    else { localStorage.removeItem("currentProfile"); profile = null; }
+  }
+}
+
 /* --- 進捗 (localStorage) --- */
-function progKey(quizId) { return `progress:${PROFILE}:${quizId}`; }
+function progKey(quizId) { return `progress:${profile.id}:${quizId}`; }
 function loadProgress(quizId) {
   try { return JSON.parse(localStorage.getItem(progKey(quizId))) || {}; }
   catch { return {}; }
@@ -55,6 +90,61 @@ function crumbs(parts) {
   return `<nav class="crumbs">${html}</nav>`;
 }
 
+/* ---------------- 利用者の選択 ---------------- */
+
+// 最初の1回(まだ誰も登録していない)と、ヘッダーの名前を押したときに出す画面
+function renderWho() {
+  const list = loadProfiles();
+  const cards = list.map((p) => {
+    const current = profile && profile.id === p.id;
+    return `<div class="who${current ? " who--current" : ""}">
+      <button class="who__pick" data-pick="${esc(p.id)}">
+        <span class="who__name">👤 ${esc(p.name)}</span>
+        ${current ? '<span class="badge">いま使っている人</span>' : ""}
+      </button>
+      <button class="who__del" data-del="${esc(p.id)}" aria-label="${esc(p.name)} を消す">消す</button>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `<h1 class="page-title">${list.length ? "だれが使う?" : "なまえを教えてね"}</h1>
+    ${list.length ? `<div class="grid">${cards}</div><h2 class="section-head who__addhead">新しい人を追加</h2>` : ""}
+    <form class="who__form" id="whoform">
+      <input id="whoname" class="who__input" maxlength="12" placeholder="なまえ (12文字まで)" autocomplete="off" />
+      <button class="btn" type="submit">${list.length ? "追加" : "はじめる"}</button>
+    </form>
+    <p class="who__err" id="whoerr"></p>
+    <p class="who__note">なまえと記録は、この端末のこのブラウザの中だけに保存されます。パスワードはありません。</p>`;
+
+  const goHome = () => { if (location.hash === "#/" || location.hash === "") route(); else location.hash = "#/"; };
+
+  app.querySelectorAll("[data-pick]").forEach((b) => {
+    b.addEventListener("click", () => { selectProfile(b.dataset.pick); goHome(); });
+  });
+  app.querySelectorAll("[data-del]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const p = list.find((x) => x.id === b.dataset.del);
+      if (!confirm(`「${p.name}」と、その記録をぜんぶ消しますか? 元にはもどせません。`)) return;
+      deleteProfile(p.id);
+      updateWhoButton();
+      renderWho();
+    });
+  });
+  document.getElementById("whoform").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = document.getElementById("whoname").value.trim();
+    const err = document.getElementById("whoerr");
+    if (!name) { err.textContent = "なまえを入れてください。"; return; }
+    if (list.some((p) => p.name === name)) { err.textContent = "同じなまえの人がもういます。"; return; }
+    addProfile(name);
+    goHome();
+  });
+}
+
+function updateWhoButton() {
+  whoBtn.hidden = !profile;
+  whoBtn.textContent = profile ? `👤 ${profile.name}` : "";
+}
+
 /* ---------------- 一覧系の描画 ---------------- */
 
 function renderHome() {
@@ -65,8 +155,70 @@ function renderHome() {
       <div class="card__meta">${s.sections.length} 単元 ・ ${nQuiz} クイズ</div>
     </a>`;
   }).join("");
-  app.innerHTML = `<h1 class="page-title">教科をえらぶ</h1>
+
+  // 中断したクイズは、教科をたどらなくてもここからすぐ再開できる
+  const paused = [];
+  for (const s of manifest.subjects)
+    for (const sec of s.sections)
+      for (const q of sec.quizzes)
+        if (resumable(loadProgress(q.id), q.count)) paused.push(quizRow(q, `${s.name} / ${sec.name}`));
+  const pausedHtml = paused.length
+    ? `<h2 class="section-head">とちゅうのクイズ</h2><div class="grid paused">${paused.join("")}</div>`
+    : "";
+
+  app.innerHTML = pausedHtml
+    + `<h1 class="page-title">教科をえらぶ</h1>
     <div class="grid cols2">${cards || '<p class="empty">クイズがまだありません。</p>'}</div>`;
+  bindQuizButtons();
+}
+
+// 一覧用: 中断中で再開できそうか (manifest の問題数で分かる範囲の確認。厳密な検証は startQuiz で行う)
+function resumable(p, count) {
+  const ip = p.inProgress;
+  return !!ip && Array.isArray(ip.answers) && ip.answers.length === count
+    && Array.isArray(ip.perms) && ip.perms.length === count
+    && Number.isInteger(ip.index) && ip.index >= 0 && ip.index < count;
+}
+
+// クイズ1件ぶんの行 (題名・前回の結果・はじめる/続きから/復習のボタン)
+function quizRow(q, where) {
+  const p = loadProgress(q.id);
+  const meta = (where ? `${esc(where)} ・ ` : "") + `全 ${q.count} 問`
+    + (p.lastAttempt ? ` ・ 前回 ${esc(p.lastAttempt.score)}/${esc(p.lastAttempt.total)}` : "");
+  const buttons = [];
+  if (resumable(p, q.count)) {
+    const done = p.inProgress.answers.filter((a) => a !== null && a !== undefined).length;
+    buttons.push(`<button class="btn" data-act="resume" data-id="${esc(q.id)}">続きから (${done}/${q.count}問 回答ずみ)</button>`);
+    buttons.push(`<button class="btn ghost" data-act="restart" data-confirm="1" data-id="${esc(q.id)}">最初から</button>`);
+  } else {
+    buttons.push(`<button class="btn" data-act="restart" data-id="${esc(q.id)}">はじめる</button>`);
+  }
+  if (p.wrongIds && p.wrongIds.length) {
+    buttons.push(`<button class="btn secondary" data-act="review" data-id="${esc(q.id)}">間違いだけ復習 (${p.wrongIds.length})</button>`);
+  }
+  return `<div class="quizrow">
+    <div class="quizrow__title">${esc(q.title)}</div>
+    <div class="quizrow__meta">${meta}</div>
+    <div class="btnrow">${buttons.join("")}</div>
+  </div>`;
+}
+
+function bindQuizButtons() {
+  app.querySelectorAll("button[data-act]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const id = b.dataset.id;
+      if (b.dataset.act === "restart") {
+        // 中断中のクイズを最初からやり直すと、とちゅうの記録は消える
+        if (b.dataset.confirm && !confirm("とちゅうまでの記録を消して、最初からはじめますか?")) return;
+        const p = loadProgress(id); delete p.inProgress; saveProgress(id, p);
+        location.hash = `#/play/${id}`;
+      } else if (b.dataset.act === "resume") {
+        location.hash = `#/play/${id}`;
+      } else if (b.dataset.act === "review") {
+        location.hash = `#/play/${id}/review`;
+      }
+    });
+  });
 }
 
 function renderSubject(subjectId) {
@@ -117,31 +269,7 @@ function renderSection(subjectId, sectionId, monthFilter) {
     pillsHtml = `<div class="filter-pills">${pills}</div>`;
   }
 
-  const rows = filtered.map((q) => {
-    const p = loadProgress(q.id);
-    const meta = `全 ${q.count} 問`
-      + (p.lastAttempt ? ` ・ 前回 ${esc(p.lastAttempt.score)}/${esc(p.lastAttempt.total)}` : "");
-    const buttons = [];
-    const resumeValid = p.inProgress
-      && Array.isArray(p.inProgress.answers)
-      && p.inProgress.answers.length === q.count
-      && Number.isInteger(p.inProgress.index)
-      && p.inProgress.index >= 0 && p.inProgress.index < q.count;
-    if (resumeValid) {
-      buttons.push(`<button class="btn" data-act="resume" data-id="${esc(q.id)}">続きから (${p.inProgress.index + 1}問目)</button>`);
-      buttons.push(`<button class="btn ghost" data-act="restart" data-id="${esc(q.id)}">最初から</button>`);
-    } else {
-      buttons.push(`<button class="btn" data-act="restart" data-id="${esc(q.id)}">はじめる</button>`);
-    }
-    if (p.wrongIds && p.wrongIds.length) {
-      buttons.push(`<button class="btn secondary" data-act="review" data-id="${esc(q.id)}">間違いだけ復習 (${p.wrongIds.length})</button>`);
-    }
-    return `<div class="quizrow">
-      <div class="quizrow__title">${esc(q.title)}</div>
-      <div class="quizrow__meta">${meta}</div>
-      <div class="btnrow">${buttons.join("")}</div>
-    </div>`;
-  }).join("");
+  const rows = filtered.map((q) => quizRow(q)).join("");
 
   app.innerHTML = crumbs([
     { label: "教科", href: "#/" },
@@ -152,19 +280,7 @@ function renderSection(subjectId, sectionId, monthFilter) {
     + pillsHtml
     + `<div class="grid">${rows || '<p class="empty">クイズがありません。</p>'}</div>`;
 
-  app.querySelectorAll("button[data-act]").forEach((b) => {
-    b.addEventListener("click", () => {
-      const id = b.dataset.id;
-      if (b.dataset.act === "restart") {
-        const p = loadProgress(id); delete p.inProgress; saveProgress(id, p);
-        location.hash = `#/play/${id}`;
-      } else if (b.dataset.act === "resume") {
-        location.hash = `#/play/${id}`;
-      } else if (b.dataset.act === "review") {
-        location.hash = `#/play/${id}/review`;
-      }
-    });
-  });
+  bindQuizButtons();
 }
 
 /* ---------------- 出題 ---------------- */
@@ -303,6 +419,7 @@ function renderQuestion() {
     + `<div class="progress">
         <span>${s.pos + 1} / ${s.order.length}</span>
         <span class="progress__bar"><span class="progress__fill" style="width:${pct}%"></span></span>
+        <button class="pausebtn" id="pause">${s.mode === "review" ? "復習をやめる" : "中断する"}</button>
       </div>`
     + `<div class="qtext">${esc(q.question)}</div>`
     + `<div class="choices">${choices}</div>`
@@ -317,6 +434,15 @@ function renderQuestion() {
   } else {
     document.getElementById("next").addEventListener("click", onNext);
   }
+  document.getElementById("pause").addEventListener("click", onPause);
+}
+
+// 中断: ここまでの回答を保存してクイズ一覧へ戻る。一覧とホームの「続きから」で同じ問題から再開できる
+// (復習モードは保存せず、やめるだけ。1問も答えていないときも保存しない)
+function onPause() {
+  const s = session;
+  if (s.mode !== "review" && s.answers.some((a) => a !== null && a !== undefined)) saveInProgress();
+  location.hash = `#/s/${s.found.subject.id}/${s.found.section.id}`;
 }
 
 function onAnswer(choiceIndex) {
@@ -351,8 +477,8 @@ function finishQuiz() {
 
   const p = loadProgress(s.quizId);
   p.wrongIds = wrongIds;                 // 復習モードでも「まだ間違える問題」に更新
-  delete p.inProgress;
   if (s.mode !== "review") {
+    delete p.inProgress;                 // 復習を終えても、中断中の本番の記録は消さない
     p.lastAttempt = { date: new Date().toISOString().slice(0, 10), score, total: s.order.length };
   }
   saveProgress(s.quizId, p);
@@ -416,6 +542,10 @@ function route() {
   const hash = location.hash || "#/";
   const parts = hash.replace(/^#\//, "").split("/").filter(Boolean);
 
+  updateWhoButton();
+  // まだ誰も登録していなければ、どの画面を開いても先に名前を聞く
+  if (!profile || parts[0] === "who") return renderWho();
+
   if (parts.length === 0) return renderHome();
   if (parts[0] === "s" && parts.length === 2) return renderSubject(parts[1]);
   if (parts[0] === "s" && parts.length === 3) return renderSection(parts[1], parts[2]);
@@ -434,6 +564,8 @@ async function main() {
     app.innerHTML = `<p class="empty">クイズ一覧の読み込みに失敗しました。<br>${esc(e.message)}</p>`;
     return;
   }
+  profile = loadProfiles().find((p) => p.id === localStorage.getItem("currentProfile")) || null;
+  whoBtn.addEventListener("click", () => { location.hash = "#/who"; });
   window.addEventListener("hashchange", route);
   route();
 }
