@@ -16,6 +16,7 @@ quiz-jobs.json のジョブの書き方:
     "title": "7月社会_公民クイズ",     アプリの表示名。NotebookLM 上のクイズ名も同じにする
     "month": "2026-07",                出題月
     "range": "…",                      (--generate 用) プロンプトの【範囲】に入る単元名
+    "source": "小6EXE_7月_社会.pdf",   (--generate 用) 使う教材。NotebookLM 上のソース名。省略時は全教材
     "raw": "data/raw/….json" }         省略時は data/raw/<id>.json
 新しい教科・単元を足すときは、"names" に表示名も足す (例 "rika": "理科", "rika/kishou": "気象")。
 """
@@ -76,15 +77,31 @@ def is_auth_error(e: Exception) -> bool:
 
 
 def download(notebook: str, title: str, raw: Path) -> None:
+    """NotebookLM 上で題名が一致する完成済みクイズ(空白の違いは無視、複数あれば最新)を保存する。"""
+    def squash(s):
+        return re.sub(r"\s+", "", s or "")
+    arts = json.loads(nlm(["artifact", "list", "-n", notebook, "--type", "quiz", "--json"])).get("artifacts", [])
+    hit = [a for a in arts if squash(a.get("title")) == squash(title) and a.get("status") == "completed"]
+    if not hit:
+        have = "、".join(a.get("title", "") for a in arts) or "なし"
+        raise NotebookLMError(f"「{title}」という名前のクイズが NotebookLM にありません (あるもの: {have})")
+    newest = max(hit, key=lambda a: a.get("created_at", ""))
     raw.parent.mkdir(parents=True, exist_ok=True)
-    nlm(["download", "quiz", str(raw), "-n", notebook, "--name", title])
-    if not raw.exists():
-        raise NotebookLMError(f"「{title}」という名前のクイズが NotebookLM にありません")
+    nlm(["download", "quiz", str(raw), "-n", notebook, "-a", newest["id"]])
 
 
 def generate(notebook: str, job: dict, prompt: str, raw: Path) -> None:
     """NotebookLM でクイズを生成し、題名を付けてダウンロードする。"""
-    out = nlm(["generate", "quiz", "--prompt-file", "-", "-n", notebook,
+    source_args = []
+    if job.get("source"):
+        # ノートブックには複数の教材が入っているので、使う教材を題名で1つに絞る
+        sources = json.loads(nlm(["source", "list", "-n", notebook, "--json"])).get("sources", [])
+        hit = [s for s in sources if s.get("title") == job["source"]]
+        if len(hit) != 1:
+            raise NotebookLMError(f"教材「{job['source']}」がノートブックに {len(hit)} 件あります "
+                                  f"(あるもの: {', '.join(s.get('title', '') for s in sources)})")
+        source_args = ["-s", hit[0]["id"]]
+    out = nlm(["generate", "quiz", "--prompt-file", "-", "-n", notebook, *source_args,
                "--quantity", job.get("quantity", "standard"),
                "--difficulty", job.get("difficulty", "medium"),
                "--wait", "--timeout", "900", "--retry", "2", "--json"],

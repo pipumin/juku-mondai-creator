@@ -33,8 +33,10 @@ notebooklm login   # ブラウザでGoogleログイン → 完了後にENTER
    （単元の一覧は [notebooklm-jobs.md](notebooklm-jobs.md)）。
 2. **`quiz-jobs.json` にジョブを1つ足す。**
    ```json
-   { "id": "shakai-rekishi-01", "title": "4月社会_歴史クイズ", "month": "2026-04", "range": "鎌倉時代（歴史）" }
+   { "id": "shakai-rekishi-01", "title": "4月社会_歴史クイズ", "month": "2026-04",
+     "source": "小6EXE_4月_社会.pdf", "range": "鎌倉時代（歴史）" }
    ```
+   - `source` は生成に使う教材（NotebookLM 上のソース名）、`range` はその中の単元。
    - `id` は `教科-単元-連番`。教科と単元はここから決まる。
    - 新しい教科・単元なら `names` に表示名も足す（例 `"shakai/rekishi": "歴史"`）。
 3. **1コマンドで取り込む。**
