@@ -55,6 +55,22 @@
               "month": "2026-10",
               "createdAt": "2026-11-14",
               "path": "shakai/koumin/shakai-koumin-06.json"
+            },
+            {
+              "id": "shakai-koumin-07",
+              "title": "夏期社会_日本の政治(1)クイズ",
+              "count": 23,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-07.json"
+            },
+            {
+              "id": "shakai-koumin-08",
+              "title": "夏期社会_日本の政治(2)クイズ",
+              "count": 26,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-08.json"
             }
           ]
         },
@@ -195,6 +211,30 @@
               "month": "2026-10",
               "createdAt": "2026-11-14",
               "path": "shakai/rekishi/shakai-rekishi-04.json"
+            },
+            {
+              "id": "shakai-rekishi-05",
+              "title": "夏期社会_農民史・産業史クイズ",
+              "count": 26,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-05.json"
+            },
+            {
+              "id": "shakai-rekishi-06",
+              "title": "夏期社会_外交史(1)クイズ",
+              "count": 20,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-06.json"
+            },
+            {
+              "id": "shakai-rekishi-07",
+              "title": "夏期社会_外交史(2)クイズ",
+              "count": 22,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-07.json"
             }
           ]
         }
