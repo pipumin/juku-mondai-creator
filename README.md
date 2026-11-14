@@ -49,6 +49,10 @@ notebooklm login   # ブラウザでGoogleログイン → 完了後にENTER
    - `[要確認]` と出た問題は、教材が手元にないと解けない表現や数式記法が残っている。
      `data/raw/` の該当 JSON を直して、もう一度実行する。
    - やり直したいときは `--force`、1本だけなら `--only <id>`。
+   - 問題数を増やしたいなど、NotebookLM で作り直すときは、ジョブに `"quantity": "more"` を書いて
+     `py -3 tools/import_all.py --regenerate --only <id>`。前の元データは `data/raw/_original/` に退避される。
+     「多め」でも1回に作られるのは25〜30問ほど。さらに増やすときは、すでに出した答えを `range` に
+     「これらは出題済みなので避ける」と書いて別に生成し、元データを合わせる（3月号の社会はこの方法で計81問にした）。
 
 Web 画面で作ったクイズも、NotebookLM 上の名前を `title` と同じにしておけば同じコマンドで取り込める。
 1本だけ手で変換したい場合は `tools/normalize_quiz.py`（`--help` 参照）。

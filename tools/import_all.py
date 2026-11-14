@@ -23,6 +23,7 @@ quiz-jobs.json のジョブの書き方:
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import re
@@ -124,7 +125,12 @@ def main() -> None:
     p.add_argument("--force", action="store_true", help="元データが変わっていなくても取り込み直す")
     p.add_argument("--generate", action="store_true",
                    help="NotebookLM にクイズが無いジョブは、range を使って生成する")
+    p.add_argument("--regenerate", action="store_true",
+                   help="NotebookLM で作り直す (--only と一緒に使う)。前の元データは data/raw/_original/ に退避。"
+                        "問題数は ジョブの quantity (fewer/standard/more)")
     args = p.parse_args()
+    if args.regenerate and not args.only:
+        sys.exit("--regenerate は作り直すクイズを --only で指定してください")
 
     conf = json.loads(Path(args.jobs).read_text(encoding="utf-8"))
     names = conf.get("names", {})
@@ -156,6 +162,18 @@ def main() -> None:
         raw = Path(job.get("raw") or f"data/raw/{jid}.json")
         out = Path(args.docs) / "quizzes" / subject / section / f"{jid}.json"
 
+        # 作り直すときは、前の元データを退避してから「元データが無い」状態にする
+        if args.regenerate:
+            if not job.get("range"):
+                results.append((jid, "設定ミス", "作り直しには range が必要"))
+                failed = True
+                continue
+            if raw.exists():
+                keep = raw.parent / "_original" / f"{raw.stem}.{dt.datetime.now():%Y%m%d-%H%M%S}{raw.suffix}"
+                keep.parent.mkdir(parents=True, exist_ok=True)
+                raw.replace(keep)
+                print(f"{jid}: 前の元データを退避 → {keep}", flush=True)
+
         # 1. 元データが無ければ NotebookLM から取ってくる
         if not raw.exists():
             if nlm_down:
@@ -163,10 +181,13 @@ def main() -> None:
                 continue
             try:
                 try:
+                    if args.regenerate:
+                        # 同名の古いクイズをダウンロードしないよう、直接生成へ進む
+                        raise NotebookLMError("作り直し")
                     download(conf["notebook"], job["title"], raw)
                     print(f"{jid}: NotebookLM からダウンロード → {raw}", flush=True)
                 except NotebookLMError as e:
-                    if is_auth_error(e) or not (args.generate and job.get("range")):
+                    if is_auth_error(e) or not ((args.generate or args.regenerate) and job.get("range")):
                         raise
                     print(f"{jid}: NotebookLM で生成中 (数分〜15分かかります)…", flush=True)
                     generate(conf["notebook"], job, prompt, raw)
