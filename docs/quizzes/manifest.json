@@ -61,6 +61,30 @@
               "month": "2026-03",
               "createdAt": "2026-11-14",
               "path": "shakai/chiri/shakai-chiri-03.json"
+            },
+            {
+              "id": "shakai-chiri-04",
+              "title": "2月社会_北海道・東北地方クイズ",
+              "count": 39,
+              "month": "2026-02",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-04.json"
+            },
+            {
+              "id": "shakai-chiri-05",
+              "title": "2月社会_関東地方クイズ",
+              "count": 44,
+              "month": "2026-02",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-05.json"
+            },
+            {
+              "id": "shakai-chiri-06",
+              "title": "2月社会_中部地方クイズ",
+              "count": 42,
+              "month": "2026-02",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-06.json"
             }
           ]
         },
