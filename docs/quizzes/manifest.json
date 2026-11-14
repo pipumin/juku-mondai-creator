@@ -71,6 +71,46 @@
               "month": "2026-08",
               "createdAt": "2026-11-14",
               "path": "shakai/koumin/shakai-koumin-08.json"
+            },
+            {
+              "id": "shakai-koumin-09",
+              "title": "夏期社会_今日の国際社会クイズ",
+              "count": 25,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-09.json"
+            },
+            {
+              "id": "shakai-koumin-10",
+              "title": "夏期社会_日本の経済クイズ",
+              "count": 22,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-10.json"
+            },
+            {
+              "id": "shakai-koumin-11",
+              "title": "夏期社会_総合演習(公民)クイズ",
+              "count": 29,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-11.json"
+            },
+            {
+              "id": "shakai-koumin-12",
+              "title": "11月社会_くらしと経済クイズ",
+              "count": 19,
+              "month": "2026-11",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-12.json"
+            },
+            {
+              "id": "shakai-koumin-13",
+              "title": "11月社会_財政クイズ",
+              "count": 24,
+              "month": "2026-11",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-13.json"
             }
           ]
         },
@@ -173,6 +213,86 @@
               "month": "2026-10",
               "createdAt": "2026-11-14",
               "path": "shakai/chiri/shakai-chiri-12.json"
+            },
+            {
+              "id": "shakai-chiri-13",
+              "title": "夏期社会_日本の農業(1)クイズ",
+              "count": 27,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-13.json"
+            },
+            {
+              "id": "shakai-chiri-14",
+              "title": "夏期社会_日本の農業(2)クイズ",
+              "count": 24,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-14.json"
+            },
+            {
+              "id": "shakai-chiri-15",
+              "title": "夏期社会_日本の林業クイズ",
+              "count": 24,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-15.json"
+            },
+            {
+              "id": "shakai-chiri-16",
+              "title": "夏期社会_日本の水産業クイズ",
+              "count": 25,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-16.json"
+            },
+            {
+              "id": "shakai-chiri-17",
+              "title": "夏期社会_日本の工業クイズ",
+              "count": 19,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-17.json"
+            },
+            {
+              "id": "shakai-chiri-18",
+              "title": "夏期社会_日本の資源クイズ",
+              "count": 24,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-18.json"
+            },
+            {
+              "id": "shakai-chiri-19",
+              "title": "夏期社会_日本のすがたクイズ",
+              "count": 26,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-19.json"
+            },
+            {
+              "id": "shakai-chiri-20",
+              "title": "夏期社会_日本の貿易クイズ",
+              "count": 20,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-20.json"
+            },
+            {
+              "id": "shakai-chiri-21",
+              "title": "夏期社会_総合演習(地理)クイズ",
+              "count": 23,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-21.json"
+            },
+            {
+              "id": "shakai-chiri-22",
+              "title": "11月社会_地形図クイズ",
+              "count": 15,
+              "month": "2026-11",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-22.json"
             }
           ]
         },
@@ -235,6 +355,62 @@
               "month": "2026-08",
               "createdAt": "2026-11-14",
               "path": "shakai/rekishi/shakai-rekishi-07.json"
+            },
+            {
+              "id": "shakai-rekishi-08",
+              "title": "夏期社会_政治史(1)クイズ",
+              "count": 23,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-08.json"
+            },
+            {
+              "id": "shakai-rekishi-09",
+              "title": "夏期社会_政治史(2)クイズ",
+              "count": 23,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-09.json"
+            },
+            {
+              "id": "shakai-rekishi-10",
+              "title": "夏期社会_文化史(1)クイズ",
+              "count": 25,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-10.json"
+            },
+            {
+              "id": "shakai-rekishi-11",
+              "title": "夏期社会_文化史(2)クイズ",
+              "count": 25,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-11.json"
+            },
+            {
+              "id": "shakai-rekishi-12",
+              "title": "夏期社会_文化史(3)クイズ",
+              "count": 13,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-12.json"
+            },
+            {
+              "id": "shakai-rekishi-13",
+              "title": "夏期社会_総合演習(歴史)クイズ",
+              "count": 19,
+              "month": "2026-08",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-13.json"
+            },
+            {
+              "id": "shakai-rekishi-14",
+              "title": "11月社会_文化の歴史クイズ",
+              "count": 26,
+              "month": "2026-11",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-14.json"
             }
           ]
         }
