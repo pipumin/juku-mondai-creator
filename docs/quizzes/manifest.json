@@ -31,6 +31,30 @@
               "month": "2026-06",
               "createdAt": "2026-06-21",
               "path": "shakai/koumin/shakai-koumin-03.json"
+            },
+            {
+              "id": "shakai-koumin-04",
+              "title": "7月社会_国際連合クイズ",
+              "count": 37,
+              "month": "2026-07",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-04.json"
+            },
+            {
+              "id": "shakai-koumin-05",
+              "title": "10月社会_政治のしくみクイズ",
+              "count": 47,
+              "month": "2026-10",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-05.json"
+            },
+            {
+              "id": "shakai-koumin-06",
+              "title": "10月社会_地方自治と社会保障クイズ",
+              "count": 42,
+              "month": "2026-10",
+              "createdAt": "2026-11-14",
+              "path": "shakai/koumin/shakai-koumin-06.json"
             }
           ]
         },
@@ -85,6 +109,54 @@
               "month": "2026-02",
               "createdAt": "2026-11-14",
               "path": "shakai/chiri/shakai-chiri-06.json"
+            },
+            {
+              "id": "shakai-chiri-07",
+              "title": "7月社会_世界地理1クイズ",
+              "count": 25,
+              "month": "2026-07",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-07.json"
+            },
+            {
+              "id": "shakai-chiri-08",
+              "title": "7月社会_世界地理2クイズ",
+              "count": 36,
+              "month": "2026-07",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-08.json"
+            },
+            {
+              "id": "shakai-chiri-09",
+              "title": "9月社会_日本の自然クイズ",
+              "count": 47,
+              "month": "2026-09",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-09.json"
+            },
+            {
+              "id": "shakai-chiri-10",
+              "title": "9月社会_日本の産業クイズ",
+              "count": 45,
+              "month": "2026-09",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-10.json"
+            },
+            {
+              "id": "shakai-chiri-11",
+              "title": "10月社会_人口と都道府県クイズ",
+              "count": 23,
+              "month": "2026-10",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-11.json"
+            },
+            {
+              "id": "shakai-chiri-12",
+              "title": "10月社会_日本の諸地域クイズ",
+              "count": 47,
+              "month": "2026-10",
+              "createdAt": "2026-11-14",
+              "path": "shakai/chiri/shakai-chiri-12.json"
             }
           ]
         },
@@ -99,6 +171,30 @@
               "month": "2026-04",
               "createdAt": "2026-11-14",
               "path": "shakai/rekishi/shakai-rekishi-01.json"
+            },
+            {
+              "id": "shakai-rekishi-02",
+              "title": "9月社会_政治の歴史クイズ",
+              "count": 35,
+              "month": "2026-09",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-02.json"
+            },
+            {
+              "id": "shakai-rekishi-03",
+              "title": "9月社会_外交の歴史クイズ",
+              "count": 47,
+              "month": "2026-09",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-03.json"
+            },
+            {
+              "id": "shakai-rekishi-04",
+              "title": "10月社会_くらしと産業の歴史クイズ",
+              "count": 46,
+              "month": "2026-10",
+              "createdAt": "2026-11-14",
+              "path": "shakai/rekishi/shakai-rekishi-04.json"
             }
           ]
         }
